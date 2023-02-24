@@ -34,14 +34,6 @@ BEGIN
     EXCEPTION WHEN NO_DATA_FOUND THEN RETURN 'Data not found'; 
 END;
 
-BEGIN
-    dbms_output.put_line(even_odd());
-END;
-
-BEGIN
-    dbms_output.put_line(generate_text_id(34));
-END;
-
 SELECT generate_text_id(3) from DUAL;
 
 SELECT even_odd() from DUAL;
