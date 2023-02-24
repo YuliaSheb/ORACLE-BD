@@ -16,8 +16,7 @@ END;
 
 CREATE OR REPLACE FUNCTION even_odd  RETURN VARCHAR IS 
     even number(10);
-    odd number(10);
-    result VARCHAR(10); 
+    odd number(10); 
 BEGIN
     SELECT count(*) INTO even FROM myTable WHERE mod(val,2)=0;
     SELECT count(*) INTO odd FROM myTable WHERE mod(val,2)!=0;
@@ -25,10 +24,6 @@ BEGIN
     ELSIF even<odd THEN RETURN 'FALSE';
     ELSE RETURN 'EQUAL';
     END IF;
-    dbms_output.put_line(odd);
-    dbms_output.put_line(even);
-    
-    RETURN result;
 END;
 
 CREATE OR REPLACE FUNCTION generate_text_id (input_id IN number) RETURN VARCHAR IS
