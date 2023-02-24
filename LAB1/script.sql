@@ -31,6 +31,25 @@ BEGIN
     RETURN result;
 END;
 
+CREATE OR REPLACE FUNCTION generate_text_id (input_id IN number) RETURN VARCHAR IS
+    val_id number;
+BEGIN
+    SELECT val INTO val_id FROM myTable WHERE id = input_id;
+    RETURN 'INSERT INTO myTable(id,val) VALUES ('||input_id||','||val_id||');';
+END;
+
+BEGIN
+    dbms_output.put_line(even_odd());
+END;
+
+BEGIN
+    dbms_output.put_line(generate_text_id(34));
+END;
+
+SELECT generate_text_id(3) from DUAL;
+
+SELECT even_odd() from DUAL;
+
 SELECT * FROM myTable;
 
 DROP TABLE myTable;
