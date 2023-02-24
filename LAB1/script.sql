@@ -73,13 +73,13 @@ begin
  update_procedure(10003,22);
 end;
 
-CREATE OR REPLACE FUNCTION salary(month_earn REAL, proceent number) RETURN REAL IS
+CREATE OR REPLACE FUNCTION salary(month_earn REAL, proceent number) RETURN VARCHAR IS
 earn REAL;
 BEGIN
     IF month_earn<0 OR proceent<0 OR proceent>100 THEN RETURN 'error';
     END IF;
     earn := (1+(proceent/100))*12*month_earn;
-    RETURN earn;
+    RETURN ''||earn||'';
 END;
 
 SELECT salary(100, 10) from DUAL;
