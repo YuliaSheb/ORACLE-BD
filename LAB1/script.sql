@@ -51,6 +51,33 @@ SELECT generate_text_id(3) from DUAL;
 
 SELECT even_odd() from DUAL;
 
+CREATE OR REPLACE PROCEDURE insert_procedure (inp_id IN number, inp_val IN number) IS
+BEGIN
+   INSERT INTO MyTable(id, val) VALUES (inp_id, inp_val);
+end;
+
+CREATE OR REPLACE PROCEDURE delete_procedure (inp_id IN number) IS
+BEGIN
+   DELETE FROM MyTable WHERE id=inp_id;
+end;
+
+CREATE OR REPLACE PROCEDURE update_procedure (inp_id IN number, inp_val IN number) IS
+BEGIN
+   UPDATE MyTable SET val=inp_val WHERE id=inp_id;
+end;
+
+begin
+ insert_procedure(10004, 1);
+end;
+
+begin
+ delete_procedure(10004);
+end;
+
+begin
+ update_procedure(10003,22);
+end;
+
 SELECT * FROM myTable;
 
 DROP TABLE myTable;
