@@ -36,6 +36,7 @@ CREATE OR REPLACE FUNCTION generate_text_id (input_id IN number) RETURN VARCHAR 
 BEGIN
     SELECT val INTO val_id FROM myTable WHERE id = input_id;
     RETURN 'INSERT INTO myTable(id,val) VALUES ('||input_id||','||val_id||');';
+    EXCEPTION WHEN NO_DATA_FOUND THEN RETURN 'Data not found'; 
 END;
 
 BEGIN
