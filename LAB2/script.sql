@@ -39,3 +39,29 @@ BEGIN
     ELSE dbms_output.put_line(' Succes');
     END IF;
 END;
+
+CREATE OR REPLACE TRIGGER uniqueNameGroups
+BEFORE INSERT OR UPDATE ON groupps
+FOR EACH ROW
+DECLARE 
+    n_name NUMBER;
+BEGIN
+    SELECT count(*) INTO n_name FROM groupps WHERE groupps.name =: new.name;
+    IF n_name > 0 THEN raise_application_error(-20000, 'It is not unique group_name');
+    ELSE dbms_output.put_line(' Succes');
+    END IF;
+END;
+
+CREATE OR REPLACE TRIGGER autoIncrementIdStudents
+BEFORE INSERT ON student
+FOR EACH ROW
+DECLARE 
+    max_id NUMBER := 0;
+BEGIN
+    SELECT max(student.id) INTO max_id FROM student;
+    IF max_id is null THEN max_id := 0;
+    END IF;
+    :new.id := max_id + 1;
+END;
+
+INSERT INTO student(name,group_id) VALUES ('Sasha', 4);
