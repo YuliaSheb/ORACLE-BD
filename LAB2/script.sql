@@ -79,3 +79,14 @@ BEGIN
 END;
 
 INSERT INTO groupps(name,c_val) VALUES ('050502', 0);
+
+CREATE OR REPLACE TRIGGER cascadeDelete
+BEFORE DELETE ON groupps
+FOR EACH ROW
+BEGIN
+    DELETE FROM student WHERE group_id=:old.id;
+END;
+
+INSERT INTO student(name,group_id) VALUES ('Vika', 6);
+
+DELETE FROM groupps WHERE id=6;
