@@ -65,3 +65,17 @@ BEGIN
 END;
 
 INSERT INTO student(name,group_id) VALUES ('Sasha', 4);
+
+CREATE OR REPLACE TRIGGER autoIncrementIdGroups
+BEFORE INSERT ON groupps
+FOR EACH ROW
+DECLARE 
+    max_id NUMBER := 0;
+BEGIN
+    SELECT max(groupps.id) INTO max_id FROM groupps;
+    IF max_id is null THEN max_id := 0;
+    END IF;
+    :new.id := max_id + 1;
+END;
+
+INSERT INTO groupps(name,c_val) VALUES ('050502', 0);
