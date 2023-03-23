@@ -151,3 +151,24 @@ END;
 BEGIN
     RestoreStudent(TO_TIMESTAMP('23.03.23 20:55:20'));
 END;
+
+CREATE OR REPLACE TRIGGER changeValue
+BEFORE DELETE OR UPDATE OR INSERT ON student
+FOR EACH ROW
+DECLARE
+    students_in_group NUMBER;
+BEGIN
+    IF inserting THEN
+        UPDATE groupps SET c_val = c_val+1 WHERE groupps.id = :new.group_id;
+    ELSIF updating THEN
+        IF :new.group_id != :old.group_id THEN
+            UPDATE groupps SET c_val = c_val-1 WHERE groupps.id =: old.group_id;
+            UPDATE groupps SET c_val = c_val+1 WHERE groupps.id = :new.group_id;
+        END IF;
+    ELSIF deleting THEN
+        UPDATE groupps SET c_val = c_val-1 WHERE groupps.id =: old.group_id;
+    END IF;
+EXCEPTION 
+    WHEN NO_DATA_FOUND THEN
+        dbms_output.put_line('the group has been deleted');
+END;
