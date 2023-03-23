@@ -90,3 +90,42 @@ END;
 INSERT INTO student(name,group_id) VALUES ('Vika', 6);
 
 DELETE FROM groupps WHERE id=6;
+
+CREATE TABLE log_student (
+id NUMBER PRIMARY KEY,
+operation VARCHAR2(10) NOT NULL,
+student_id NUMBER,
+student_name VARCHAR2(15) NOT NULL,
+student_group_id NUMBER,
+date_time timestamp
+);
+
+CREATE OR REPLACE TRIGGER autoIncrementIdLog
+BEFORE INSERT ON log_student
+FOR EACH ROW
+DECLARE 
+    max_id NUMBER := 0;
+BEGIN
+    SELECT max(id) INTO max_id FROM log_student;
+    IF max_id is null THEN max_id := 0;
+    END IF;
+    :new.id := max_id + 1;
+END;
+
+CREATE OR REPLACE TRIGGER logStudent
+BEFORE DELETE OR UPDATE OR INSERT ON student
+FOR EACH ROW
+BEGIN
+    IF inserting THEN
+        INSERT INTO log_student(operation, student_id, student_name, student_group_id, date_time) 
+            VALUES ('INSERT', :new.id, :new.name, :new.group_id, current_timestamp);
+    ELSIF updating THEN
+        INSERT INTO log_student(operation, student_id, student_name, student_group_id, date_time) 
+            VALUES ('UPDATE', :new.id, :new.name, :new.group_id, current_timestamp);
+     ELSIF deleting THEN
+        INSERT INTO log_student(operation, student_id, student_name, student_group_id, date_time) 
+            VALUES ('DELETE', :old.id, :old.name, :old.group_id, current_timestamp);
+    END IF;
+END;
+
+SELECT * FROM log_student;
