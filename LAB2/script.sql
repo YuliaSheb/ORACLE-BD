@@ -129,3 +129,25 @@ BEGIN
 END;
 
 SELECT * FROM log_student;
+
+CREATE OR REPLACE PROCEDURE RestoreStudent(old_time timestamp) IS 
+BEGIN
+    FOR l IN (SELECT * FROM log_student WHERE date_time > old_time ORDER BY date_time DESC)
+    LOOP
+        CASE l.operation 
+            WHEN 'INSERT' THEN
+                DELETE FROM student WHERE id=l.student_id;
+            WHEN 'UPDATE' THEN
+                UPDATE student SET id = l.old_student_id,
+                    name = l.old_student_name,
+                    group_id = l.old_student_group_id
+                WHERE id=l.student_id;
+            WHEN 'DELETE' THEN
+                INSERT INTO student(id,name,group_id) VALUES (l.old_student_id, l.old_student_name, l.old_student_group_id);
+        END CASE;
+    END LOOP;
+END;
+
+BEGIN
+    RestoreStudent(TO_TIMESTAMP('23.03.23 20:55:20'));
+END;
