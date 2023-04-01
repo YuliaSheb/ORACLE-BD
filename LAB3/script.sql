@@ -1,0 +1,3 @@
+CREATE USER c##dev IDENTIFIED BY pass4dev;
+  
+CREATE USER c##pod IDENTIFIED BY passpod;
