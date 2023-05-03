@@ -14,11 +14,14 @@ CREATE TABLE zoo_habitans(
 
 CREATE TABLE type_habitans(
     id NUMBER PRIMARY KEY,
-    type_id NUMBER,
     name VARCHAR2(15),
+    birthd date,
+    type_id NUMBER,
     count_habitans NUMBER,
     CONSTRAINT fk_zoo_type FOREIGN KEY (type_id) REFERENCES zoo_habitans(id)
     );
+
+DROP TABLE type_habitans;
     
 CREATE TABLE log_zoo(
     operation_id NUMBER PRIMARY KEY,
@@ -45,6 +48,7 @@ CREATE TABLE log_type(
     times TIMESTAMP NOT NULL,
     id NUMBER,
     name VARCHAR2(15),
+    birthd date,
     type_id NUMBER,
     count_habitans NUMBER
     );
@@ -57,7 +61,7 @@ CREATE TABLE logs(
     table_name VARCHAR2(15)
     );
     
-DROP TABLE logs;
+DROP TABLE log_type;
     
 CREATE OR REPLACE TRIGGER log_zoo 
 AFTER UPDATE OR INSERT OR DELETE ON zooo FOR EACH ROW
@@ -127,25 +131,25 @@ BEGIN
     curr_time := CURRENT_TIMESTAMP;
     CASE
         WHEN inserting THEN 
-            INSERT INTO log_zoo VALUES (count_op+1,'INSERT',curr_time, :NEW.id, :NEW.name, :NEW.type_id, :NEW.count_habitans);
+            INSERT INTO log_type VALUES (count_op+1,'INSERT',curr_time, :NEW.id, :NEW.name, :NEW.birthd, :NEW.type_id, :NEW.count_habitans);
             INSERT INTO logs VALUES (count_op_all,count_op+1,'INSERT',curr_time,table_name);
         WHEN updating THEN 
-            INSERT INTO log_zoo VALUES (count_op+1,'UPDATE',curr_time, :OLD.id, :OLD.name, :OLD.type_id, :OLD.count_habitans);
+            INSERT INTO log_type VALUES (count_op+1,'UPDATE',curr_time, :OLD.id, :OLD.name, :OLD.birthd, :OLD.type_id, :OLD.count_habitans);
             INSERT INTO logs VALUES (count_op_all,count_op+1,'UPDATE',curr_time, table_name);
         WHEN deleting THEN 
-            INSERT INTO log_zoo VALUES (count_op+1,'DELETE',curr_time, :OLD.id, :OLD.name, :OLD.type_id, :OLD.count_habitans);
+            INSERT INTO log_type VALUES (count_op+1,'DELETE',curr_time, :OLD.id, :OLD.name, :OLD.birthd, :OLD.type_id, :OLD.count_habitans);
             INSERT INTO logs VALUES (count_op_all,count_op+1,'DELETE',curr_time, table_name);
     END CASE;
     commit;
 END;
 
-
 CREATE OR REPLACE PACKAGE data_rollback_overload IS
     PROCEDURE data_rollback(to_date TIMESTAMP);
     PROCEDURE data_rollback(msc number);
     PROCEDURE create_report(to_date TIMESTAMP);
-    PROCEDURE create_report_from_old(to_date TIMESTAMP);
 END data_rollback_overload;
+
+SET SERVEROUTPUT ON;
 
 CREATE OR REPLACE PACKAGE BODY data_rollback_overload IS
 PROCEDURE data_rollback(to_date TIMESTAMP)
@@ -160,18 +164,13 @@ BEGIN
 END data_rollback;
 PROCEDURE create_report(to_date TIMESTAMP)
 IS 
-  l_clob clob;
-  out_File  UTL_FILE.FILE_TYPE;
+  log_html VARCHAR(3000);
 BEGIN 
- l_clob := '<html><head>
+ log_html := '<html><head>
 <style>
 table, th, td {
   border: 1px solid black;
   border-collapse: collapse;
-}
-table.center {
-  margin-left: auto;
-  margin-right: auto;
 }
 </style>
 </head><body> <h1 style="text-align: center"> TYPE LIST </h1> 
@@ -187,15 +186,24 @@ table.center {
   </tr>';
   for l_rec in (select * from log_type) loop
    IF(l_rec.times <= to_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
+    log_html := log_html || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
     ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.name 
     ||'</td><td align="left">' || l_rec.birthd 
     ||'</td><td align="left">' || l_rec.type_id
     ||'</td><td align="left">' || l_rec.count_habitans ||'</td> </tr>';
     END IF;
   end loop;
-  l_clob := l_clob || '</table>';
-   l_clob := l_clob || '<h1 style="text-align: center"> HABITANS LIST </h1> 
+  log_html := log_html || '</table></body></html>';
+  DBMS_OUTPUT.PUT_LINE(log_html);
+  log_html := '<html><head>
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+</style>
+</head><body>
+<h1 style="text-align: center"> HABITANS LIST </h1> 
 <table style="width:100%" class="center">
   <tr align="center">
       <th align="center">OPERATION</th>
@@ -206,13 +214,23 @@ table.center {
   </tr>';
   for l_rec in (select * from log_habitans) loop
     IF(l_rec.times <= to_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
+    log_html := log_html || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
     ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.type
     ||'</td><td align="left">' || l_rec.zoo_id ||'</td> </tr>';
     END IF;
   end loop;
-  l_clob := l_clob || '</table>';
-     l_clob := l_clob || '<h1 style="text-align: center"> ZOO LIST </h1> 
+  log_html := log_html || '</table>';
+  log_html := log_html || '</body></html>';
+  DBMS_OUTPUT.PUT_LINE(log_html);
+     log_html := '<html><head>
+<style>
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+</style>
+</head><body>
+<h1 style="text-align: center"> ZOO LIST </h1> 
 <table style="width:100%" class="center">
   <tr align="center">
       <th align="center">OPERATION</th>
@@ -224,101 +242,14 @@ table.center {
   </tr>';
   for l_rec in (select * from log_zoo) loop
    IF(l_rec.times <= to_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
+    log_html := log_html || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
     ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.name 
     ||'</td><td align="left">' || l_rec.city || '</td><td align="left">' || l_rec.country ||'</td> </tr>';
     END IF;
   end loop;
-  l_clob := l_clob || '</table>';
-  l_clob := l_clob || '</body></html>';
-  out_File := UTL_FILE.FOPEN('RTVMS2', 'date.txt' , 'W');
-  UTL_FILE.PUT_LINE(out_file , to_date);
-  UTL_FILE.FCLOSE(out_file);
-  DBMS_OUTPUT.PUT_LINE(l_clob);
-END;
-PROCEDURE create_report_from_old(to_date TIMESTAMP)
-IS 
-  out_File UTL_FILE.FILE_TYPE;
-  from_date_str clob;
-  from_date TIMESTAMP;
-  l_clob clob;
-BEGIN 
-  out_File := UTL_FILE.FOPEN('RTVMS2', 'date.txt' , 'R');
-  UTL_FILE.GET_LINE(out_file , from_date_str);
-  UTL_FILE.FCLOSE(out_file);
-  from_date := TO_TIMESTAMP(from_date_str);
- l_clob := '<html><head>
-<style>
-table, th, td {
-  border: 1px solid black;
-  border-collapse: collapse;
-}
-table.center {
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
-</head><body> <h1 style="text-align: center"> TYPE LIST </h1> 
-<table style="width:100%" class="center">
-  <tr align="center">
-    <th align="center">OPERATION</th>
-     <th align="center">OPERATION_TIME</th>
-    <th align="center">ID</th>
-    <th align="center">NAME</th>
-    <th align="center">BIRTHD</th>
-    <th align="center">TYPE_ID</th>
-    <th align="center">COUNT_HABITANS</th>
-  </tr>';
-  for l_rec in (select * from log_type) loop
-   IF(l_rec.times <= to_date and l_rec.times >= from_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
-    ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.name 
-    ||'</td><td align="left">' || l_rec.birthd
-    ||'</td><td align="left">' || l_rec.type_id
-    ||'</td><td align="left">' || l_rec.count_habitans ||'</td> </tr>';
-    END IF;
-  end loop;
-  l_clob := l_clob || '</table>';
-   l_clob := l_clob || '<h1 style="text-align: center"> HABITANS LIST </h1> 
-<table style="width:100%" class="center">
-  <tr align="center">
-      <th align="center">OPERATION</th>
-     <th align="center">OPERATION_TIME</th>
-    <th align="center">ID</th>
-     <th align="center">TYPE</th>
-    <th align="center">ZOO_ID</th>
-  </tr>';
-  for l_rec in (select * from log_habitans) loop
-   IF(l_rec.times <= to_date and l_rec.times >= from_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
-    ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.type 
-    ||'</td><td align="left">' || l_rec.zoo_id ||'</td> </tr>';
-    END IF;
-  end loop;
-  l_clob := l_clob || '</table>';
-     l_clob := l_clob || '<h1 style="text-align: center"> ZOO LIST </h1> 
-<table style="width:100%" class="center">
-  <tr align="center">
-      <th align="center">OPERATION</th>
-     <th align="center">OPERATION_TIME</th>
-    <th align="center">ID</th>
-     <th align="center">NAME</th>
-    <th align="center">CITY</th>
-    <th align="center">COUNTRY</th>
-  </tr>';
-  for l_rec in (select * from log_zoo) loop
-   IF(l_rec.times <= to_date and l_rec.times >= from_date) THEN
-    l_clob := l_clob || '<tr align="center"> <td align="left">'|| l_rec.operation ||'</td> <td align="center">'
-    ||l_rec.times ||'</td><td align="left">' || l_rec.id ||'</td><td align="left">' || l_rec.name ||'</td><td align="left">' || l_rec.city
-    ||'</td><td align="left">' || l_rec.country ||'</td> </tr>';
-    END IF;
-  end loop;
-  l_clob := l_clob || '</table>';
-  l_clob := l_clob || '</body></html>';
-  DBMS_OUTPUT.PUT_LINE(l_clob);
-  EXCEPTION 
-    WHEN OTHERS 
-    THEN dbms_output.put_line(SQLCODE);
+  log_html := log_html || '</table>';
+  log_html := log_html || '</body></html>';
+  DBMS_OUTPUT.PUT_LINE(log_html);
 END;
 END data_rollback_overload;
 
@@ -397,10 +328,30 @@ BEGIN
      END IF;      
     END LOOP;
 END;
-
-SELECT * FROM log_zoo;
+    
+SELECT * FROM logs;
 
 INSERT INTO zooo VALUES(1,'Zoo Minsk','Minsk','Belarus');
-    
+INSERT INTO zooo VALUES(2,'Zoo Grodno','Minsk','Belarus');
+INSERT INTO zooo VALUES(3,'Zoo Brest','Brest','Belarus');
+UPDATE zooo SET city='Grodno' WHERE id=2;
+SELECT * FROM log_zoo;
+SELECT * FROM zooo;
 
-    
+INSERT INTO zoo_habitans VALUES(1,1,'Mammals');
+INSERT INTO zoo_habitans VALUES(2,2,'Birds');
+INSERT INTO zoo_habitans VALUES(3,3,'Amphibians');
+SELECT * FROM log_habitans;
+SELECT * FROM zoo_habitans;
+
+INSERT INTO type_habitans VALUES(1,'Elephants',to_date('05-11-2020','dd-mm-yyyy'),1,2);
+INSERT INTO type_habitans VALUES(2,'Parrots',to_date('03-05-2022','dd-mm-yyyy'),2,12);
+INSERT INTO type_habitans VALUES(3,'Snakes',to_date('17-02-2023','dd-mm-yyyy'),3,2);
+INSERT INTO type_habitans VALUES(4,'Dogs',to_date('05-01-2022','dd-mm-yyyy'),1,20);
+SELECT * FROM log_type;
+SELECT * FROM type_habitans;
+
+BEGIN
+    data_rollback_overload.data_rollback(TO_TIMESTAMP('03.05.23 13:49:01,691000000'));
+    data_rollback_overload.create_report(TO_TIMESTAMP('03.05.23 13:49:01,691000000'));
+END;
