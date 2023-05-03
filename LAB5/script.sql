@@ -164,8 +164,10 @@ BEGIN
 END data_rollback;
 PROCEDURE create_report(to_date TIMESTAMP)
 IS 
-  log_html VARCHAR(3000);
+  file_handle UTL_FILE.FILE_TYPE;
+  log_html VARCHAR2(10000);
 BEGIN 
+file_handle := UTL_FILE.FOPEN('BD5', 'my_file.html', 'W', 10000);
  log_html := '<html><head>
 <style>
 table, th, td {
@@ -194,6 +196,7 @@ table, th, td {
     END IF;
   end loop;
   log_html := log_html || '</table></body></html>';
+  UTL_FILE.PUT_LINE(file_handle,log_html,true);
   DBMS_OUTPUT.PUT_LINE(log_html);
   log_html := '<html><head>
 <style>
@@ -221,6 +224,7 @@ table, th, td {
   end loop;
   log_html := log_html || '</table>';
   log_html := log_html || '</body></html>';
+  UTL_FILE.PUT_LINE(file_handle,log_html,true);
   DBMS_OUTPUT.PUT_LINE(log_html);
      log_html := '<html><head>
 <style>
@@ -249,18 +253,20 @@ table, th, td {
   end loop;
   log_html := log_html || '</table>';
   log_html := log_html || '</body></html>';
+  UTL_FILE.PUT_LINE(file_handle,log_html,true);
   DBMS_OUTPUT.PUT_LINE(log_html);
+  UTL_FILE.FCLOSE(file_handle);
 END;
 END data_rollback_overload;
 
 CREATE OR REPLACE PROCEDURE roll_back(time_back TIMESTAMP)
 IS
 PRAGMA AUTONOMOUS_TRANSACTION;
-CURSOR c_log_type(id NUMBER) IS SELECT * FROM log_type WHERE operation_id=id;
+CURSOR c_log_type(id NUMBER) IS SELECT * FROM log_type;
 r_type log_type%rowtype;
-CURSOR c_log_habitans(id NUMBER) IS SELECT * FROM log_habitans WHERE operation_id=id;
+CURSOR c_log_habitans(id NUMBER) IS SELECT * FROM log_habitans;
 r_habitans log_habitans%rowtype;
-CURSOR c_log_zoo(id NUMBER) IS SELECT * FROM log_zoo WHERE operation_id=id;
+CURSOR c_log_zoo(id NUMBER) IS SELECT * FROM log_zoo;
 r_zoo log_zoo%rowtype;
 CURSOR c_get_logs IS SELECT * FROM logs WHERE times > time_back order by times DESC;
 wrong_operation EXCEPTION;
@@ -273,17 +279,16 @@ BEGIN
                FETCH c_log_zoo INTO r_zoo;
                dbms_output.put_line('log_zoo'|| ' ' ||r_zoo.operation ||r_zoo.operation_id);
                 CASE r_zoo.operation
-                WHEN 'INSERT' THEN
-                  DELETE FROM zooo WHERE id=r_zoo.id;
-                WHEN 'UPDATE' THEN
-                    UPDATE zooo SET 
-                        zooo.name=r_zoo.name,
-                        zooo.city=r_zoo.city ,
-                        zooo.country=r_zoo.country 
-                        WHERE zooo.id=r_zoo.id;
-                WHEN 'DELETE' THEN
-                 INSERT INTO zooo VALUES(r_zoo.id, r_zoo.name, r_zoo.city, r_zoo.country);
-                ELSE raise wrong_operation;
+                    WHEN 'INSERT' THEN
+                        DELETE FROM zooo WHERE id=r_zoo.id;
+                    WHEN 'UPDATE' THEN
+                        UPDATE zooo SET 
+                            zooo.name=r_zoo.name,
+                            zooo.city=r_zoo.city ,
+                            zooo.country=r_zoo.country 
+                            WHERE zooo.id=r_zoo.id;
+                    WHEN 'DELETE' THEN
+                        INSERT INTO zooo VALUES(r_zoo.id, r_zoo.name, r_zoo.city, r_zoo.country);
                 END CASE;
               CLOSE c_log_zoo;
             WHEN 'log_habitans' THEN
@@ -300,7 +305,6 @@ BEGIN
                         WHERE zoo_habitans.id=r_habitans.id;
                 WHEN 'DELETE' THEN
                  INSERT INTO zoo_habitans VALUES(r_habitans.id, r_habitans.type, r_habitans.zoo_id);
-                ELSE raise wrong_operation;
                 END CASE;
               CLOSE c_log_habitans;
             WHEN 'log_type' THEN
@@ -319,7 +323,6 @@ BEGIN
                         WHERE type_habitans.id=r_type.id;
                 WHEN 'DELETE' THEN
                  INSERT INTO type_habitans VALUES(r_type.id, r_type.name, r_type.birthd,  r_type.type_id, r_type.count_habitans);
-                ELSE raise wrong_operation;
                 END CASE;
               CLOSE c_log_type;
             ELSE raise wrong_operation;
@@ -334,6 +337,7 @@ SELECT * FROM logs;
 INSERT INTO zooo VALUES(1,'Zoo Minsk','Minsk','Belarus');
 INSERT INTO zooo VALUES(2,'Zoo Grodno','Minsk','Belarus');
 INSERT INTO zooo VALUES(3,'Zoo Brest','Brest','Belarus');
+INSERT INTO zooo VALUES(4,'Zoo Gomel','Gomel','Belarus');
 UPDATE zooo SET city='Grodno' WHERE id=2;
 SELECT * FROM log_zoo;
 SELECT * FROM zooo;
@@ -348,10 +352,14 @@ INSERT INTO type_habitans VALUES(1,'Elephants',to_date('05-11-2020','dd-mm-yyyy'
 INSERT INTO type_habitans VALUES(2,'Parrots',to_date('03-05-2022','dd-mm-yyyy'),2,12);
 INSERT INTO type_habitans VALUES(3,'Snakes',to_date('17-02-2023','dd-mm-yyyy'),3,2);
 INSERT INTO type_habitans VALUES(4,'Dogs',to_date('05-01-2022','dd-mm-yyyy'),1,20);
+UPDATE type_habitans SET count_habitans=21 WHERE id=4;
 SELECT * FROM log_type;
 SELECT * FROM type_habitans;
 
 BEGIN
-    data_rollback_overload.data_rollback(TO_TIMESTAMP('03.05.23 13:49:01,691000000'));
-    data_rollback_overload.create_report(TO_TIMESTAMP('03.05.23 13:49:01,691000000'));
+    data_rollback_overload.data_rollback(TO_TIMESTAMP('03.05.23 17:02:35,241000000'));
+    data_rollback_overload.create_report(TO_TIMESTAMP('03.05.23 17:02:35,241000000'));
+END;
+BEGIN
+    data_rollback_overload.data_rollback(TO_TIMESTAMP('03.05.23 13:56:49,325000000'));
 END;
